@@ -1,4 +1,30 @@
 # Report
+To run the test on register file, please clone the repo and run following the commands below:
+```terminal
+$ git clone https://github.com/QingmuDeng/HW4.git
+$ cd HW4/
+$ bash test.sh
+```
+
+## Deliverable 1:
+### Schematic for Design 1
+```verilog
+always @(posedge clk) begin
+    if(wrenable) begin
+        q <= d;
+    end
+end
+```
+![Design1](https://github.com/QingmuDeng/HW4/blob/master/register1.jpg)
+
+### Schematic for Design 2
+```verilog
+// Gated clock - avoid this style
+always @(posedge (clk & wrenable)) begin
+	q <= d;
+end
+```
+![Design2](https://github.com/QingmuDeng/HW4/blob/master/register2.jpg)
 
 ## Deliverable 6:
 
