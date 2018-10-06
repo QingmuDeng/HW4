@@ -134,7 +134,7 @@ output reg		Clk
   // Verify expectations and report test result
   if((ReadData1 !== 42) || (ReadData2 !== 42)) begin
     dutpassed = 0;	// Set to 'false' on failure
-    $display("Test Case 1 Failed");
+    $display("Test Case 1 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
   end
 
   // Test Case 2: 
@@ -150,7 +150,7 @@ output reg		Clk
 
   if((ReadData1 !== 15) || (ReadData2 !== 15)) begin
     dutpassed = 0;
-    $display("Test Case 2 Failed");
+    $display("Test Case 2 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
   end
 
   // Test Case 3: 
@@ -166,7 +166,7 @@ output reg		Clk
 
   if((ReadData1 !== 0) || (ReadData2 !== 0)) begin
     dutpassed = 0;
-    $display("Test Case 3 Failed");
+    $display("Test Case 3 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
   end
 
   // Test Case 4: 
@@ -183,7 +183,7 @@ output reg		Clk
 
   if((ReadData1 == WriteData) || (ReadData2 == WriteData)) begin
     dutpassed = 0;
-    $display("Test Case 4 Failed");
+    $display("Test Case 4 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
   end
 
   // Test Case 5: 
@@ -218,7 +218,7 @@ output reg		Clk
     #5 Clk=1; #5 Clk=0;
     if(ReadData2 != WriteData) begin
       dutpassed = 0;
-      $display("Test Case 6 Failed");
+      $display("Test Case 6 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
     end
   end
 
@@ -226,7 +226,7 @@ output reg		Clk
   //   Test whether Port 1 is broken and always reads register as
   //   the same number everytime
   reset_all();
-  for(address=0; address<=31; address=address+1) begin: Port1_Check
+  for(address=1; address<=31; address=address+1) begin: Port1_Check
     WriteRegister = 5'd2;
     WriteData = $urandom%(32'hFFFFFFFF)+1;
     RegWrite = 1;
@@ -234,11 +234,55 @@ output reg		Clk
     #5 Clk=1; #5 Clk=0;
     if(ReadData1 != WriteData) begin
       dutpassed = 0;
-      $display("Test Case 7 Failed");
+      $display("Test Case 7 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
+    end
+  end
+
+  // Test Case 8: 
+  //   Test whether Write happens even if no rising clock edge occurs
+  //   Verify by reading back from Read Ports 1 and 2
+  reset_all();
+  for(address=1; address<=31; address=address+1) begin: Clock_check
+    WriteRegister = address;
+    WriteData = $urandom%(32'hFFFFFFFF)+1;
+    RegWrite = 1;
+    ReadRegister1 = address;
+    ReadRegister2 = address;
+    if(ReadData1 == WriteData || ReadData2 == WriteData) begin
+      dutpassed = 0;
+      $display("Test Case 8 Failed before clock edge, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
+    end
+    #5 Clk=1; #5 Clk=0;
+    if(!(ReadData1 == WriteData && ReadData2 == WriteData)) begin
+      dutpassed = 0;
+      $display("Test Case 8 Failed after clock edge, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
     end
   end
   
-
+  // Test Case 9: 
+  //   Test whether Read Ports 1 and 2 are independent of each other
+  //   rather than just a copy of the other. Verify by reading two
+  //  different ports with different values at the same time and
+  // compare results
+  reset_all();
+  for(address=0; address<=16; address=address+1) begin: RP1_RP2_Redundancy
+    WriteRegister = address;
+    WriteData = 32'hBBBBBBBB;
+    RegWrite = 1;
+    #5 Clk=1; #5 Clk=0;
+    WriteRegister = address+15;
+    WriteData = 32'hAAAAAAAA;
+    RegWrite = 1;
+    #5 Clk=1; #5 Clk=0;
+    ReadRegister1 = address;
+    ReadRegister2 = address+15;
+    
+    // If the Read port is different from the write port but the register data is the same
+    if(ReadData1 == ReadData2) begin
+      dutpassed = 0;
+      $display("Test Case 5 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
+    end
+  end
 
   // All done!  Wait a moment and signal test completion.
   #5

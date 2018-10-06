@@ -25,8 +25,6 @@ input		Clk		// Clock (Positive Edge Triggered)
 
   /******** Read Operation ********/
 
-  // decoder1to32 decoder(.out(decode), .enable(RegWrite), .address(ReadRegister1));
-  // decoder1to32 decoder(.out(decode), .enable(RegWrite), .address(ReadRegister2));
   assign ReadData1 = regFile[ReadRegister1];//regFile[ReadRegister1];
   assign ReadData2 = regFile[ReadRegister2];
 
@@ -44,10 +42,4 @@ input		Clk		// Clock (Positive Edge Triggered)
   endgenerate
   /******** The end of Write Operation ********/
   
-  // These two lines are clearly wrong.  They are included to showcase how the 
-  // test harness works. Delete them after you understand the testing process, 
-  // and replace them with your actual code.
-  // assign ReadData1 = 42;
-  // assign ReadData2 = 42;
-
 endmodule
