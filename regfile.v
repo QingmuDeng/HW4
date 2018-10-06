@@ -5,6 +5,9 @@
 //   2 asynchronous read ports
 //   1 synchronous, positive edge triggered write port
 //------------------------------------------------------------------------------
+`include "register.v"
+`include "mux.v"
+`include "decoders.v"
 
 module regfile
 (
@@ -17,11 +20,34 @@ input[4:0]	WriteRegister,	// Address of register to write
 input		RegWrite,	// Enable writing of register when High
 input		Clk		// Clock (Positive Edge Triggered)
 );
+  wire[31:0] regFile[31:0];
+  wire[31:0] decode;
 
+  /******** Read Operation ********/
+
+  // decoder1to32 decoder(.out(decode), .enable(RegWrite), .address(ReadRegister1));
+  // decoder1to32 decoder(.out(decode), .enable(RegWrite), .address(ReadRegister2));
+  assign ReadData1 = regFile[ReadRegister1];//regFile[ReadRegister1];
+  assign ReadData2 = regFile[ReadRegister2];
+
+  /******** The end of Read Operation ********/
+
+  /******** Write Operation ********/
+  decoder1to32 decoder(.out(decode), .enable(RegWrite), .address(WriteRegister));
+
+  register32zero register(.q(regFile[0]), .d(WriteData), .wrenable(decode[0]), .clk(Clk));
+  genvar regNum;
+  generate 
+    for(regNum=1; regNum<32; regNum=regNum+1)begin: mainReg
+      register32 register(.q(regFile[regNum]), .d(WriteData), .wrenable(decode[regNum]), .clk(Clk));
+    end
+  endgenerate
+  /******** The end of Write Operation ********/
+  
   // These two lines are clearly wrong.  They are included to showcase how the 
   // test harness works. Delete them after you understand the testing process, 
   // and replace them with your actual code.
-  assign ReadData1 = 42;
-  assign ReadData2 = 42;
+  // assign ReadData1 = 42;
+  // assign ReadData2 = 42;
 
 endmodule

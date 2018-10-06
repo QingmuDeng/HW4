@@ -93,6 +93,16 @@ output reg[4:0]		WriteRegister,
 output reg		RegWrite,
 output reg		Clk
 );
+  integer address, seed;
+
+  task reset_all;
+    for(address=0; address<=31; address=address+1) begin
+      WriteRegister = address;
+      WriteData = 32'd0;
+      RegWrite = 1;
+      #5 Clk=1; #5 Clk=0; #5 Clk=1; #5 Clk=0;
+    end
+  endtask
 
   // Initialize register driver signals
   initial begin
@@ -113,6 +123,7 @@ output reg		Clk
   // Test Case 1: 
   //   Write '42' to register 2, verify with Read Ports 1 and 2
   //   (Passes because example register file is hardwired to return 42)
+  reset_all();
   WriteRegister = 5'd2;
   WriteData = 32'd42;
   RegWrite = 1;
@@ -129,6 +140,7 @@ output reg		Clk
   // Test Case 2: 
   //   Write '15' to register 2, verify with Read Ports 1 and 2
   //   (Fails with example register file, but should pass with yours)
+  reset_all();
   WriteRegister = 5'd2;
   WriteData = 32'd15;
   RegWrite = 1;
@@ -140,6 +152,92 @@ output reg		Clk
     dutpassed = 0;
     $display("Test Case 2 Failed");
   end
+
+  // Test Case 3: 
+  //   Read register zero with Read Ports 1 and 2 and verify that
+  //   the read result is actually zero despite any write operation
+  reset_all();
+  WriteRegister = 5'd0;
+  WriteData = 32'd15;
+  RegWrite = 1;
+  ReadRegister1 = 5'd0;
+  ReadRegister2 = 5'd0;
+  #5 Clk=1; #5 Clk=0;
+
+  if((ReadData1 !== 0) || (ReadData2 !== 0)) begin
+    dutpassed = 0;
+    $display("Test Case 3 Failed");
+  end
+
+  // Test Case 4: 
+  //   Test whether Write Enable is broken / ignored by writing to 
+  //   a register with Write Enable false. Verify by reading that
+  //   register back from Read Ports 1 and 2.
+  reset_all();
+  WriteRegister = $random%31+1;
+  WriteData = 32'hFF;
+  RegWrite = 0;
+  ReadRegister1 = WriteRegister;
+  ReadRegister2 = WriteRegister;
+  #5 Clk=1; #5 Clk=0;
+
+  if((ReadData1 == WriteData) || (ReadData2 == WriteData)) begin
+    dutpassed = 0;
+    $display("Test Case 4 Failed");
+  end
+
+  // Test Case 5: 
+  //   Test whether decoder is broken by checking whether the write
+  //   spilled into other registers. Check by reading the registers back
+  //   through Read Ports 1 and 2
+  reset_all();
+  WriteRegister = $random%31+1;
+  WriteData = 32'hEE;
+  RegWrite = 1;
+  for(address=0; address<=16; address=address+1) begin: decoderCheck
+    ReadRegister1 = address;
+    ReadRegister2 = address+15;
+    #5 Clk=1; #5 Clk=0;
+    
+    // If the Read port is different from the write port but the register data is the same
+    if(((ReadData1 == WriteData) || (ReadData2 == WriteData)) && !((ReadRegister1 == WriteRegister) || (ReadRegister2 == WriteRegister))) begin
+      dutpassed = 0;
+      $display("Test Case 5 Failed, WPORT: %d; RPORT1: %d, %h; RPORT2: %d, %h", WriteRegister, ReadRegister1, ReadData1, ReadRegister2, ReadData2);
+    end
+  end
+
+  // Test Case 6: 
+  //   Test whether Port 2 is broken and always reads register as
+  //   the same number everytime
+  reset_all();
+  for(address=1; address<=31; address=address+1) begin: Port2_Check
+    WriteRegister = 5'd3;
+    WriteData = $urandom%(32'hFFFFFFFF)+1;
+    RegWrite = 1;
+    ReadRegister2 = 5'd3;
+    #5 Clk=1; #5 Clk=0;
+    if(ReadData2 != WriteData) begin
+      dutpassed = 0;
+      $display("Test Case 6 Failed");
+    end
+  end
+
+  // Test Case 7: 
+  //   Test whether Port 1 is broken and always reads register as
+  //   the same number everytime
+  reset_all();
+  for(address=0; address<=31; address=address+1) begin: Port1_Check
+    WriteRegister = 5'd2;
+    WriteData = $urandom%(32'hFFFFFFFF)+1;
+    RegWrite = 1;
+    ReadRegister1 = 5'd2;
+    #5 Clk=1; #5 Clk=0;
+    if(ReadData1 != WriteData) begin
+      dutpassed = 0;
+      $display("Test Case 7 Failed");
+    end
+  end
+  
 
 
   // All done!  Wait a moment and signal test completion.
